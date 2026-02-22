@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Rolling update — run from your local machine to deploy the latest code.
+# Usage: bash deploy/deploy.sh
+set -euo pipefail
+
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
+CONFIG="$(dirname "${BASH_SOURCE[0]}")/config.local.sh"
+if [ ! -f "$CONFIG" ]; then
+    echo "ERROR: $CONFIG not found."
+    echo "Copy deploy/config.template.sh to deploy/config.local.sh and fill in your values."
+    exit 1
+fi
+# shellcheck source=deploy/config.template.sh
+source "$CONFIG"
+
+# =============================================================================
+
+# Extract directory names from PROJECTS (strip |url suffix)
+PROJECT_DIRS=()
+for _entry in "${PROJECTS[@]}"; do
+    PROJECT_DIRS+=("${_entry%%|*}")
+done
+
+VENV="$DEPLOY_ROOT/webapp-switchboard/venv"
+
+echo "==> Deploying to $SERVER"
+
+ssh "$SERVER" bash -s -- "$DEPLOY_ROOT" "$SWITCHBOARD_USER" "$VENV" "${PROJECT_DIRS[@]}" <<'REMOTE'
+set -euo pipefail
+DEPLOY_ROOT="$1"; SWITCHBOARD_USER="$2"; VENV="$3"
+shift 3; PROJECTS=("$@")
+
+echo "--- Pulling latest code"
+for dir in "${PROJECTS[@]}"; do
+    dest="$DEPLOY_ROOT/$dir"
+    if [ -d "$dest/.git" ]; then
+        echo "  git pull: $dir"
+        sudo -u "$SWITCHBOARD_USER" git -C "$dest" pull --ff-only
+    else
+        echo "  SKIP (not cloned): $dir"
+    fi
+done
+
+echo "--- Reinstalling dependencies"
+for dir in "${PROJECTS[@]}"; do
+    req="$DEPLOY_ROOT/$dir/requirements.txt"
+    if [ -f "$req" ]; then
+        echo "  pip install: $dir"
+        "$VENV/bin/pip" install --quiet -r "$req"
+    fi
+done
+
+echo "--- Restarting switchboard service"
+sudo systemctl restart switchboard
+sleep 2
+sudo systemctl status switchboard --no-pager
+REMOTE
+
+echo ""
+echo "==> Deploy complete"

@@ -1,0 +1,22 @@
+[Unit]
+Description=WebApp Switchboard — multi-project Flask compositor
+After=network.target
+
+[Service]
+User={{SWITCHBOARD_USER}}
+Group={{SWITCHBOARD_USER}}
+WorkingDirectory={{DEPLOY_ROOT}}/webapp-switchboard
+RuntimeDirectory=switchboard
+ExecStart={{DEPLOY_ROOT}}/webapp-switchboard/venv/bin/gunicorn \
+    --config {{DEPLOY_ROOT}}/webapp-switchboard/deploy/gunicorn.conf.py \
+    app:create_app()
+Restart=on-failure
+RestartSec=5
+
+# Security hardening
+ProtectHome=true
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

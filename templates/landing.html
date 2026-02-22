@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebApp Switchboard</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --border: #2a2d3a;
+            --text: #e2e4e9;
+            --text-muted: #8b8fa3;
+            --accent: #6c8cff;
+            --accent-hover: #8ba4ff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 4rem 1.5rem;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 3rem;
+            font-size: 0.95rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem;
+            width: 100%;
+            max-width: 960px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: border-color 0.15s, transform 0.15s;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+        }
+
+        .card p {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            line-height: 1.45;
+        }
+
+        .card .path {
+            display: inline-block;
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+            font-family: "SF Mono", "Consolas", monospace;
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <h1>WebApp Switchboard</h1>
+    <p class="subtitle">{{ projects | length }} project{{ "s" if projects | length != 1 }} registered</p>
+    <div class="grid">
+        {% for proj in projects %}
+        <a class="card" href="{{ proj.url_prefix }}/">
+            <h2>{{ proj.display_name }}</h2>
+            <p>{{ proj.description }}</p>
+            <span class="path">{{ proj.url_prefix }}/</span>
+        </a>
+        {% endfor %}
+    </div>
+</body>
+</html>

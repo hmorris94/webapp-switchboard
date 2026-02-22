@@ -1,0 +1,21 @@
+# Local project registry — contains real project names and directories
+projects_local.py
+
+# Local deployment config — contains real server IPs, domain, and repo URLs
+deploy/config.local.sh
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Environment
+.env
+
+# Editor and tool state
+.claude/
+
+# Windows artefacts
+nul
