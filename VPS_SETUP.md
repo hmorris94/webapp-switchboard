@@ -70,37 +70,37 @@ chmod 700 /home/deployer/.ssh && chmod 600 /home/deployer/.ssh/authorized_keys
 
 Reconnect as `deployer` and use `sudo` for admin actions.
 
-## 4. Prepare gitignored config files
+## 4. Prepare local config
 
-Two files are gitignored and must be created manually — once on your **local machine** (so `deploy.sh` works) and once on the **server** (so `setup.sh` and WebApp Switchboard itself work).
-
-### `deploy/config.local.sh`
+`deploy/config.local.sh` is gitignored and must be created on your **local machine**. `deploy.sh` sources it to get the SSH target, deploy root, and project list before connecting to the server.
 
 ```bash
 cp deploy/config.template.sh deploy/config.local.sh
 $EDITOR deploy/config.local.sh
 ```
 
-Fill in all variables — `SWITCHBOARD_USER`, `DEPLOY_ROOT`, `DOMAIN`, `CERTBOT_EMAIL`, `SERVER`, `DEPLOY_USER`, and the `PROJECTS` array. The `directory_name` part of each entry (before `|`) must match the `"directory"` field in `projects_local.py`. `DEPLOY_USER` is the SSH user that runs `deploy.sh`; `setup.sh` grants it passwordless sudo for service restarts.
+Fill in all variables — `SWITCHBOARD_USER`, `DEPLOY_ROOT`, `DOMAIN`, `CERTBOT_EMAIL`, `DEPLOY_USER`, and the `PROJECTS` array. The `directory_name` part of each entry (before `|`) must match the `"directory"` field in `projects_local.py`. `DEPLOY_USER` is the SSH user that runs `deploy.sh`; `setup.sh` grants it passwordless sudo for service restarts.
 
-### `projects_local.py`
-
-```bash
-cp projects_template.py projects_local.py
-$EDITOR projects_local.py
-```
-
-This is the project registry loaded by WebApp Switchboard at startup. It is not deployed by git — place it on the server manually after cloning (see step 5).
+The server also needs its own copy of `config.local.sh` so that `setup.sh` can run — copy it over in step 5. `projects_local.py` is server-only and is also created in step 5.
 
 ## 5. Bootstrap the server
 
-On the server, clone the repo and create the gitignored files:
+Clone the repo on the server and place the gitignored config files:
 
 ```bash
-sudo git clone https://github.com/YOUR_USER/webapp-switchboard.git /opt/webapp-switchboard
+sudo git clone https://github.com/hmorris94/webapp-switchboard.git /opt/webapp-switchboard
+```
+
+Copy `config.local.sh` from your local machine (it contains the same values `setup.sh` needs):
+
+```bash
+scp deploy/config.local.sh deployer@your-domain.com:/opt/webapp-switchboard/deploy/config.local.sh
+```
+
+Then on the server, create `projects_local.py`:
+
+```bash
 cd /opt/webapp-switchboard
-sudo cp deploy/config.template.sh deploy/config.local.sh
-sudo $EDITOR deploy/config.local.sh
 sudo cp projects_template.py projects_local.py
 sudo $EDITOR projects_local.py
 ```
@@ -112,8 +112,8 @@ sudo bash deploy/setup.sh
 ```
 
 This installs:
-1. System packages (Python 3, nginx, certbot, git, ufw)
-2. 2 GB swap file (with `vm.swappiness=10`)
+1. 2 GB swap file (with `vm.swappiness=10`)
+2. System packages (Python 3, nginx, certbot, git, ufw)
 3. Chromium + ChromeDriver (for projects that use Selenium scraping)
 4. `switchboard` OS user
 5. Passwordless sudo rule for `DEPLOY_USER` (service restart only)
@@ -122,7 +122,7 @@ This installs:
 8. `switchboard.service` systemd unit (enabled + started)
 9. nginx site config (enabled, default site removed)
 10. TLS certificate via Let's Encrypt
-11. UFW rules (SSH + Nginx Full)
+11. UFW rules (SSH rate-limited + Nginx Full)
 12. Log rotation config
 
 ## 6. Verify service health
