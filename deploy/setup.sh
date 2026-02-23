@@ -24,24 +24,7 @@ SWITCHBOARD_DIR="$DEPLOY_ROOT/webapp-switchboard"
 VENV="$SWITCHBOARD_DIR/venv"
 
 # =============================================================================
-# 1. System packages
-# =============================================================================
-
-echo "==> Installing system packages"
-apt-get update -qq
-apt-get install -y \
-    python3 python3-pip python3-venv \
-    nginx certbot python3-certbot-nginx \
-    git ufw curl wget
-
-# Chromium + ChromeDriver (required by projects that use Selenium scraping)
-echo "==> Installing Chromium and ChromeDriver"
-apt-get install -y chromium-browser chromium-chromedriver || \
-    apt-get install -y chromium chromium-driver || \
-    echo "WARNING: Could not install Chromium. Install manually if scraping is needed."
-
-# =============================================================================
-# 2. Swap file (recommended for 1 GB RAM hosts)
+# 1. Swap file (recommended for 1 GB RAM hosts)
 # =============================================================================
 
 if [ ! -f /swapfile ]; then
@@ -60,6 +43,23 @@ if [ ! -f /swapfile ]; then
 else
     echo "==> Swap file already exists, skipping"
 fi
+
+# =============================================================================
+# 2. System packages
+# =============================================================================
+
+echo "==> Installing system packages"
+apt-get update -qq
+apt-get install -y \
+    python3 python3-pip python3-venv \
+    nginx certbot python3-certbot-nginx \
+    git ufw curl wget
+
+# Chromium + ChromeDriver (required by projects that use Selenium scraping)
+echo "==> Installing Chromium and ChromeDriver"
+apt-get install -y chromium-browser chromium-chromedriver || \
+    apt-get install -y chromium chromium-driver || \
+    echo "WARNING: Could not install Chromium. Install manually if scraping is needed."
 
 # =============================================================================
 # 3. App user
@@ -163,7 +163,7 @@ certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$CERTBOT_EMAIL" |
 # =============================================================================
 
 echo "==> Configuring UFW"
-ufw allow OpenSSH
+ufw limit OpenSSH
 ufw allow "Nginx Full"
 ufw --force enable
 
