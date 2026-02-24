@@ -1,0 +1,11 @@
+# Always use LF for shell scripts — CRLF breaks bash on Linux/WSL
+*.sh text eol=lf
+
+# Python files use LF
+*.py text eol=lf
+
+# Text files use LF
+*.md text eol=lf
+*.txt text eol=lf
+*.conf text eol=lf
+*.html text eol=lf
