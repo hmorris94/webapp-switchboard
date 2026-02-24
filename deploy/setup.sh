@@ -87,6 +87,7 @@ for entry in "${PROJECTS[@]}"; do
     dest="$DEPLOY_ROOT/$dir"
     if [ -d "$dest/.git" ]; then
         echo "  $dir — already cloned, pulling latest"
+        chown -R "$SWITCHBOARD_USER:$SWITCHBOARD_USER" "$dest"
         sudo -u "$SWITCHBOARD_USER" git -C "$dest" pull --ff-only
     else
         echo "  $dir — cloning from $url"
@@ -135,16 +136,17 @@ systemctl restart switchboard
 # 7. nginx
 # =============================================================================
 
-echo "==> Installing nginx config"
-NGINX_SRC="$SWITCHBOARD_DIR/deploy/nginx.conf"
-NGINX_DEST="/etc/nginx/sites-available/switchboard"
+echo "==> Installing temporary HTTP-only nginx config for ACME challenge"
+cat > /etc/nginx/sites-available/switchboard <<EOF
+server {
+    listen 80;
+    server_name $DOMAIN;
+    location /.well-known/acme-challenge/ { root /var/www/html; }
+    location / { return 301 https://\$host\$request_uri; }
+}
+EOF
 
-sed \
-    -e "s|{{DOMAIN}}|$DOMAIN|g" \
-    -e "s|{{DEPLOY_ROOT}}|$DEPLOY_ROOT|g" \
-    "$NGINX_SRC" > "$NGINX_DEST"
-
-ln -sf "$NGINX_DEST" /etc/nginx/sites-enabled/switchboard
+ln -sf /etc/nginx/sites-available/switchboard /etc/nginx/sites-enabled/switchboard
 rm -f /etc/nginx/sites-enabled/default
 
 nginx -t
@@ -155,14 +157,33 @@ systemctl reload nginx
 # =============================================================================
 
 echo "==> Obtaining TLS certificate for $DOMAIN"
-certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$CERTBOT_EMAIL" || \
-    echo "WARNING: certbot failed. Run manually: sudo certbot --nginx -d $DOMAIN"
+certbot certonly --webroot -w /var/www/html \
+    -d "$DOMAIN" --non-interactive --agree-tos -m "$CERTBOT_EMAIL" || \
+    echo "WARNING: certbot failed. Run manually: sudo certbot certonly --webroot -w /var/www/html -d $DOMAIN"
+
+# =============================================================================
+# 8b. nginx — full config (TLS cert now exists)
+# =============================================================================
+
+echo "==> Installing full nginx config"
+NGINX_SRC="$SWITCHBOARD_DIR/deploy/nginx.conf"
+NGINX_DEST="/etc/nginx/sites-available/switchboard"
+
+sed \
+    -e "s|{{DOMAIN}}|$DOMAIN|g" \
+    -e "s|{{DEPLOY_ROOT}}|$DEPLOY_ROOT|g" \
+    "$NGINX_SRC" > "$NGINX_DEST"
+
+nginx -t
+systemctl reload nginx
 
 # =============================================================================
 # 9. Firewall
 # =============================================================================
 
 echo "==> Configuring UFW"
+ufw default deny incoming
+ufw default allow outgoing
 ufw limit OpenSSH
 ufw allow "Nginx Full"
 ufw --force enable
@@ -196,7 +217,7 @@ echo ""
 echo "Next steps:"
 echo "  1. Verify:  sudo systemctl status switchboard"
 echo "              sudo journalctl -u switchboard -n 50 --no-pager"
-echo "              curl -I https://$DOMAIN"
+echo "              curl -I --http2 https://$DOMAIN"
 echo ""
 echo "  2. Add per-project cron jobs as $SWITCHBOARD_USER. Example:"
 echo "       0 3 * * 1 $VENV/bin/python $DEPLOY_ROOT/My-Project/main.py scrape >> /var/log/switchboard-myproject.log 2>&1"

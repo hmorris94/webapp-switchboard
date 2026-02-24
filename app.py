@@ -126,8 +126,11 @@ def create_app(projects=None, config=None):
                 try:
                     bg_module = importlib.import_module(f"{pkg_name}.background")
                     bg_module.start_background_tasks()
-                except (ImportError, AttributeError):
-                    pass
+                except (ImportError, AttributeError) as exc:
+                    print(
+                        f"WARNING: failed to start background tasks for '{proj['name']}': {exc}",
+                        file=sys.stderr,
+                    )
 
         except Exception as exc:
             print(

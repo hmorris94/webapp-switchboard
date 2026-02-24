@@ -131,7 +131,7 @@ This installs:
 sudo systemctl status switchboard --no-pager
 sudo journalctl -u switchboard -n 100 --no-pager
 sudo nginx -t
-curl -I https://your-domain.com
+curl -I --http2 https://your-domain.com
 ```
 
 Expected:
@@ -189,7 +189,7 @@ This SSHes to the server, pulls all repos, reinstalls requirements, and restarts
 ### certbot fails
 Cause: DNS not propagated yet, or wrong `DOMAIN` in `config.local.sh`.
 ```bash
-sudo certbot --nginx -d your-domain.com
+sudo certbot certonly --webroot -w /var/www/html -d your-domain.com
 ```
 
 ### Chromium package name differs by distro
