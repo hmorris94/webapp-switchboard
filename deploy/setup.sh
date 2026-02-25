@@ -62,17 +62,31 @@ apt-get install -y chromium-browser chromium-chromedriver || \
     echo "WARNING: Could not install Chromium. Install manually if scraping is needed."
 
 # =============================================================================
-# 3. App user
+# 3. App user (SSH login)
 # =============================================================================
 
-echo "==> Creating system user: $SWITCHBOARD_USER"
+echo "==> Creating app user: $SWITCHBOARD_USER"
 id "$SWITCHBOARD_USER" &>/dev/null || \
-    useradd --system --no-create-home --shell /usr/sbin/nologin "$SWITCHBOARD_USER"
+    useradd --create-home --shell /bin/bash "$SWITCHBOARD_USER"
 
-echo "==> Granting $DEPLOY_USER passwordless sudo for service management"
-echo "$DEPLOY_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart switchboard, /usr/bin/systemctl restart switchboard, /bin/systemctl status switchboard, /usr/bin/systemctl status switchboard" \
+echo "==> Granting $SWITCHBOARD_USER passwordless sudo for service management"
+echo "$SWITCHBOARD_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart switchboard, /usr/bin/systemctl restart switchboard, /bin/systemctl status switchboard, /usr/bin/systemctl status switchboard" \
     > /etc/sudoers.d/switchboard-deploy
 chmod 440 /etc/sudoers.d/switchboard-deploy
+
+echo "==> Setting up SSH authorized_keys for $SWITCHBOARD_USER"
+SSH_DIR="/home/$SWITCHBOARD_USER/.ssh"
+mkdir -p "$SSH_DIR"
+if [ -f /root/.ssh/authorized_keys ] && [ ! -f "$SSH_DIR/authorized_keys" ]; then
+    cp /root/.ssh/authorized_keys "$SSH_DIR/authorized_keys"
+    echo "  Copied root's authorized_keys — SSH in as $SWITCHBOARD_USER with your existing key"
+else
+    touch "$SSH_DIR/authorized_keys"
+    echo "  Add your public key to $SSH_DIR/authorized_keys"
+fi
+chmod 700 "$SSH_DIR"
+chmod 600 "$SSH_DIR/authorized_keys"
+chown -R "$SWITCHBOARD_USER:$SWITCHBOARD_USER" "$SSH_DIR"
 
 # =============================================================================
 # 4. Clone all repos

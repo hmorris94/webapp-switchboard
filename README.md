@@ -38,7 +38,7 @@ Quick start on a fresh Ubuntu VPS:
 
 ```bash
 cp deploy/config.template.sh deploy/config.local.sh
-# edit config.local.sh — fill in DOMAIN, SERVER, SWITCHBOARD_USER, and repo URLs
+# edit config.local.sh — fill in DOMAIN, CERTBOT_EMAIL, SWITCHBOARD_USER, and repo URLs
 sudo bash deploy/setup.sh
 ```
 

@@ -51,24 +51,13 @@ dig +short your-domain.com
 
 TLS provisioning (certbot) will fail if DNS isn't resolving first.
 
-## 3. First login and hardening
+## 3. First login
 
 ```bash
 ssh root@YOUR_VPS_IP
 ```
 
-Recommended: create a non-root deploy user:
-
-```bash
-adduser deployer
-usermod -aG sudo deployer
-mkdir -p /home/deployer/.ssh
-cp /root/.ssh/authorized_keys /home/deployer/.ssh/
-chown -R deployer:deployer /home/deployer/.ssh
-chmod 700 /home/deployer/.ssh && chmod 600 /home/deployer/.ssh/authorized_keys
-```
-
-Reconnect as `deployer` and use `sudo` for admin actions.
+`setup.sh` creates the `switchboard` app user (a real login user with a home directory and SSH keys) — no manual user creation needed at this step.
 
 ## 4. Prepare local config
 
@@ -79,44 +68,50 @@ cp deploy/config.template.sh deploy/config.local.sh
 $EDITOR deploy/config.local.sh
 ```
 
-Fill in all variables — `SWITCHBOARD_USER`, `DEPLOY_ROOT`, `DOMAIN`, `CERTBOT_EMAIL`, `DEPLOY_USER`, and the `PROJECTS` array. The `directory_name` part of each entry (before `|`) must match the `"directory"` field in `projects_local.py`. `DEPLOY_USER` is the SSH user that runs `deploy.sh`; `setup.sh` grants it passwordless sudo for service restarts.
+Fill in all variables:
+
+- `SWITCHBOARD_USER` — OS user that runs the service and owns all files; also the SSH login user (default: `switchboard`)
+- `DEPLOY_ROOT` — where all repos live; defaults to `/home/$SWITCHBOARD_USER`
+- `DOMAIN`, `CERTBOT_EMAIL` — your domain and Let's Encrypt contact email
+- `PROJECTS` — array of `"directory_name|git_url"` entries; `directory_name` must match the `"directory"` field in `projects_local.py`
 
 The server also needs its own copy of `config.local.sh` so that `setup.sh` can run — copy it over in step 5. `projects_local.py` is server-only and is also created in step 5.
 
 ## 5. Bootstrap the server
 
-Clone the repo on the server and place the gitignored config files:
+Pre-create the deploy root and bootstrap-clone the repo **on the server as root**:
 
 ```bash
-sudo git clone https://github.com/hmorris94/webapp-switchboard.git /opt/webapp-switchboard
+mkdir -p /home/switchboard
+git clone https://github.com/hmorris94/webapp-switchboard.git /home/switchboard/webapp-switchboard
 ```
 
-Copy `config.local.sh` from your local machine (it contains the same values `setup.sh` needs):
+Copy `config.local.sh` from your local machine:
 
 ```bash
-scp deploy/config.local.sh deployer@your-domain.com:/opt/webapp-switchboard/deploy/config.local.sh
+scp deploy/config.local.sh root@your-domain.com:/home/switchboard/webapp-switchboard/deploy/config.local.sh
 ```
 
 Then on the server, create `projects_local.py`:
 
 ```bash
-cd /opt/webapp-switchboard
-sudo cp projects_template.py projects_local.py
-sudo $EDITOR projects_local.py
+cd /home/switchboard/webapp-switchboard
+cp projects_template.py projects_local.py
+$EDITOR projects_local.py
 ```
 
-Then run the bootstrap script as root:
+Run the bootstrap script as root:
 
 ```bash
-sudo bash deploy/setup.sh
+bash deploy/setup.sh
 ```
 
 This installs:
 1. 2 GB swap file (with `vm.swappiness=10`)
 2. System packages (Python 3, nginx, certbot, git, ufw)
 3. Chromium + ChromeDriver (for projects that use Selenium scraping)
-4. `switchboard` OS user
-5. Passwordless sudo rule for `DEPLOY_USER` (service restart only)
+4. `switchboard` login user with home directory and SSH authorized_keys
+5. Passwordless sudo rule for `switchboard` (service restart only)
 6. All project repos cloned into `$DEPLOY_ROOT/`
 7. Shared venv with all project requirements installed
 8. `switchboard.service` systemd unit (enabled + started)
@@ -125,11 +120,17 @@ This installs:
 11. UFW rules (SSH rate-limited + Nginx Full)
 12. Log rotation config
 
+After setup completes you can SSH directly into the app user for dev and troubleshooting:
+
+```bash
+ssh switchboard@your-domain.com
+```
+
 ## 6. Verify service health
 
 ```bash
-sudo systemctl status switchboard --no-pager
-sudo journalctl -u switchboard -n 100 --no-pager
+systemctl status switchboard --no-pager
+journalctl -u switchboard -n 100 --no-pager
 sudo nginx -t
 curl -I --http2 https://your-domain.com
 ```
@@ -141,20 +142,20 @@ Expected:
 
 ## 7. Add per-project cron jobs
 
-Projects that fetch or scrape data on a schedule need cron entries under the `switchboard` user:
+Projects that fetch or scrape data on a schedule need cron entries. SSH in as `switchboard` and edit your own crontab:
 
 ```bash
-sudo crontab -u switchboard -e
+crontab -e
 ```
 
 Example entry:
 
 ```cron
 # Weekly background job — Monday 3:00 AM UTC
-0 3 * * 1 /opt/webapp-switchboard/venv/bin/python /opt/My-Project/main.py scrape >> /var/log/switchboard-myproject.log 2>&1
+0 3 * * 1 ~/webapp-switchboard/venv/bin/python ~/My-Project/main.py scrape >> /var/log/switchboard-myproject.log 2>&1
 ```
 
-All cron jobs use the shared venv at `/opt/webapp-switchboard/venv/bin/python`.
+All cron jobs use the shared venv at `~/webapp-switchboard/venv/bin/python`.
 
 ## 8. Deploy updates
 
@@ -164,23 +165,22 @@ Ensure `deploy/config.local.sh` exists on your local machine, then run:
 bash deploy/deploy.sh
 ```
 
-This SSHes to the server, pulls all repos, reinstalls requirements, and restarts the switchboard service.
+This SSHes to the server as `switchboard`, pulls all repos, reinstalls requirements, and restarts the switchboard service.
 
 ## 9. Adding a new project
 
-1. On the server: clone the repo and set ownership
+1. SSH in as `switchboard` and clone the repo:
    ```bash
-   sudo git clone https://... /opt/NewProject
-   sudo chown -R switchboard:switchboard /opt/NewProject
+   git clone https://... ~/NewProject
    ```
 2. Install its requirements into the shared venv:
    ```bash
-   sudo /opt/webapp-switchboard/venv/bin/pip install -r /opt/NewProject/requirements.txt
+   ~/webapp-switchboard/venv/bin/pip install -r ~/NewProject/requirements.txt
    ```
-3. Add it to `projects_local.py` on the server and locally
+3. Add it to `~/webapp-switchboard/projects_local.py` on the server and locally
 4. Add it to the `PROJECTS` array in `deploy/config.local.sh` (local and server)
 5. Restart: `sudo systemctl restart switchboard`
-6. Add any cron jobs to the `switchboard` user's crontab
+6. Add any cron jobs to your crontab
 
 ---
 
@@ -197,7 +197,7 @@ On some Ubuntu/Debian versions the packages are `chromium` + `chromium-driver` r
 
 ### WebApp Switchboard service won't start
 ```bash
-sudo journalctl -u switchboard -n 200 --no-pager
+journalctl -u switchboard -n 200 --no-pager
 ```
 Common causes: missing venv dependency, wrong `DEPLOY_ROOT`, permission error, or `projects_local.py` missing from the webapp-switchboard directory.
 
@@ -212,7 +212,7 @@ The socket is created by Gunicorn on startup. `RuntimeDirectory=switchboard` in 
 ### One project fails to load
 WebApp Switchboard logs a warning to stderr and continues — other projects still serve normally.
 ```bash
-sudo journalctl -u switchboard -n 100 --no-pager | grep -i warning
+journalctl -u switchboard -n 100 --no-pager | grep -i warning
 ```
 Usual causes: missing dependency in the shared venv, `directory` name in `projects_local.py` doesn't match the actual folder, or the project's `app/blueprint.py` has an import error. The failed project will be absent from the landing page.
 
@@ -221,12 +221,15 @@ Usual causes: missing dependency in the shared venv, `directory` name in `projec
 ## Quick command reference
 
 ```bash
-# First-time setup (on server)
-sudo bash deploy/setup.sh
+# First-time setup (on server, as root)
+bash deploy/setup.sh
+
+# SSH in for dev/troubleshooting
+ssh switchboard@your-domain.com
 
 # Health checks
-sudo systemctl status switchboard --no-pager
-sudo journalctl -u switchboard -f
+systemctl status switchboard --no-pager
+journalctl -u switchboard -f
 sudo nginx -t
 
 # Deploy update from local machine
@@ -236,8 +239,8 @@ bash deploy/deploy.sh
 sudo systemctl restart switchboard
 
 # Check cron jobs
-sudo crontab -u switchboard -l
+crontab -l
 
-# Run a project CLI command manually on the server
-sudo -u switchboard /opt/webapp-switchboard/venv/bin/python /opt/My-Project/main.py --help
+# Run a project CLI command manually
+~/webapp-switchboard/venv/bin/python ~/My-Project/main.py --help
 ```

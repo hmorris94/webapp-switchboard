@@ -23,7 +23,6 @@ webapp-switchboard/
 │   ├── switchboard.service  # systemd unit template (placeholders filled by setup.sh)
 │   ├── gunicorn.conf.py     # Gunicorn: Unix socket, 2 workers, preload_app
 │   └── nginx.conf           # nginx: HTTP→HTTPS redirect + reverse proxy template
-├── VPS.md              # Architectural notes on VPS deployment design
 └── VPS_SETUP.md        # Operational VPS setup guide
 ```
 

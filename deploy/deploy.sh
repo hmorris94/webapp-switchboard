@@ -28,17 +28,17 @@ VENV="$DEPLOY_ROOT/webapp-switchboard/venv"
 
 echo "==> Deploying to $SERVER"
 
-ssh "$SERVER" bash -s -- "$DEPLOY_ROOT" "$SWITCHBOARD_USER" "$VENV" "${PROJECT_DIRS[@]}" <<'REMOTE'
+ssh "$SERVER" bash -s -- "$DEPLOY_ROOT" "$VENV" "${PROJECT_DIRS[@]}" <<'REMOTE'
 set -euo pipefail
-DEPLOY_ROOT="$1"; SWITCHBOARD_USER="$2"; VENV="$3"
-shift 3; PROJECTS=("$@")
+DEPLOY_ROOT="$1"; VENV="$2"
+shift 2; PROJECTS=("$@")
 
 echo "--- Pulling latest code"
 for dir in "${PROJECTS[@]}"; do
     dest="$DEPLOY_ROOT/$dir"
     if [ -d "$dest/.git" ]; then
         echo "  git pull: $dir"
-        sudo -u "$SWITCHBOARD_USER" git -C "$dest" pull --ff-only
+        git -C "$dest" pull --ff-only
     else
         echo "  SKIP (not cloned): $dir"
     fi
