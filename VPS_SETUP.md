@@ -79,20 +79,22 @@ The server also needs its own copy of `config.local.sh` so that `setup.sh` can r
 
 ## 5. Bootstrap the server
 
-Pre-create the deploy root and bootstrap-clone the repo **on the server as root**:
+**On the server as root**, pre-create `DEPLOY_ROOT` and bootstrap-clone the switchboard repo. The path must match `DEPLOY_ROOT` from your config (default: `/home/switchboard`). Use the switchboard URL from the first entry of your `PROJECTS` array in `config.local.sh`:
 
 ```bash
 mkdir -p /home/switchboard
-git clone https://github.com/hmorris94/webapp-switchboard.git /home/switchboard/webapp-switchboard
+git clone <your-switchboard-repo-url> /home/switchboard/webapp-switchboard
 ```
 
-Copy `config.local.sh` from your local machine:
+`mkdir` is required here: the `switchboard` user doesn't exist until `setup.sh` runs, so there is no home directory yet — git cannot clone into a path whose parent doesn't exist. `setup.sh` fixes ownership once the user is created.
+
+**From your local machine**, copy `config.local.sh` to the server:
 
 ```bash
 scp deploy/config.local.sh root@your-domain.com:/home/switchboard/webapp-switchboard/deploy/config.local.sh
 ```
 
-Then on the server, create `projects_local.py`:
+**Back on the server as root**, create `projects_local.py`:
 
 ```bash
 cd /home/switchboard/webapp-switchboard
@@ -100,7 +102,7 @@ cp projects_template.py projects_local.py
 $EDITOR projects_local.py
 ```
 
-Run the bootstrap script as root:
+Run the bootstrap script:
 
 ```bash
 bash deploy/setup.sh

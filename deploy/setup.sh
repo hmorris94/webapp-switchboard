@@ -94,6 +94,7 @@ chown -R "$SWITCHBOARD_USER:$SWITCHBOARD_USER" "$SSH_DIR"
 
 echo "==> Cloning repositories into $DEPLOY_ROOT"
 mkdir -p "$DEPLOY_ROOT"
+chown "$SWITCHBOARD_USER:$SWITCHBOARD_USER" "$DEPLOY_ROOT"
 
 for entry in "${PROJECTS[@]}"; do
     dir="${entry%%|*}"
@@ -233,9 +234,7 @@ echo "  1. Verify:  sudo systemctl status switchboard"
 echo "              sudo journalctl -u switchboard -n 50 --no-pager"
 echo "              curl -I --http2 https://$DOMAIN"
 echo ""
-echo "  2. Add per-project cron jobs as $SWITCHBOARD_USER. Example:"
+echo "  2. Add per-project cron jobs: SSH in as $SWITCHBOARD_USER and run crontab -e. Example:"
 echo "       0 3 * * 1 $VENV/bin/python $DEPLOY_ROOT/My-Project/main.py scrape >> /var/log/switchboard-myproject.log 2>&1"
-echo ""
-echo "     Run: sudo crontab -u $SWITCHBOARD_USER -e"
 echo ""
 echo "  3. See VPS_SETUP.md for the full operational guide."
