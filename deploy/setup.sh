@@ -14,7 +14,7 @@ if [ ! -f "$CONFIG" ]; then
     exit 1
 fi
 # shellcheck source=deploy/config.template.sh
-source "$CONFIG"
+source <(sed 's/\r//' "$CONFIG")
 
 # =============================================================================
 # Derived paths
