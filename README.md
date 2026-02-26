@@ -34,7 +34,7 @@ Opens at `http://localhost:8080`.
 
 See `VPS_SETUP.md` for the full operational guide. The `deploy/` directory contains all deployment assets.
 
-Quick start on a fresh Ubuntu VPS:
+Quick start on a fresh Ubuntu 25.04+ VPS (nginx 1.25+ required for HTTP/3):
 
 ```bash
 cp deploy/config.template.sh deploy/config.local.sh

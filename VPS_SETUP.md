@@ -12,7 +12,7 @@ Operational guide for deploying WebApp Switchboard to a public VPS. The `deploy/
 | `deploy.sh` | Rolling update from your local machine (sources `config.local.sh`) |
 | `switchboard.service` | Systemd unit template (placeholders filled by `setup.sh`) |
 | `gunicorn.conf.py` | Gunicorn: Unix socket, 2 workers, application factory, 60s timeout |
-| `nginx.conf` | Nginx: HTTP→HTTPS redirect, reverse proxy to Gunicorn socket |
+| `nginx.conf` | Nginx: HTTP→HTTPS redirect, reverse proxy to Gunicorn socket, HTTP/2 + HTTP/3 (QUIC) |
 
 ## Architecture
 
@@ -34,7 +34,7 @@ WebApp Switchboard Flask app
 
 Recommended baseline (DigitalOcean, Linode, Vultr, etc.):
 
-- **OS**: Ubuntu 22.04 or 24.04 LTS
+- **OS**: Ubuntu 25.04 or later — nginx 1.25+ is required for HTTP/3 (QUIC); Ubuntu 24.04 LTS ships nginx 1.24 and is not supported
 - **Size**: 1 vCPU / 1 GB RAM — adequate for personal traffic; `setup.sh` creates a 2 GB swap file to handle memory spikes
 - **Auth**: SSH key only — disable password auth
 
@@ -140,7 +140,7 @@ curl -I --http2 https://your-domain.com
 Expected:
 - `switchboard` service: `active (running)`
 - nginx config test: `syntax is ok`
-- HTTPS endpoint: `HTTP/2 200`
+- HTTPS endpoint: `HTTP/2 200` (browsers will upgrade to HTTP/3 on subsequent visits)
 
 ## 7. Add per-project cron jobs
 

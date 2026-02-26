@@ -200,7 +200,8 @@ echo "==> Configuring UFW"
 ufw default deny incoming
 ufw default allow outgoing
 ufw limit OpenSSH
-ufw allow "Nginx Full"
+ufw allow "Nginx HTTPS"
+ufw allow "Nginx QUIC"
 ufw --force enable
 
 # =============================================================================
