@@ -12,7 +12,7 @@ Operational guide for deploying WebApp Switchboard to a public VPS. The `deploy/
 | `deploy.sh` | Rolling update from your local machine (sources `config.local.sh`) |
 | `switchboard.service` | Systemd unit template (placeholders filled by `setup.sh`) |
 | `gunicorn.conf.py` | Gunicorn: Unix socket, 2 workers, application factory, 60s timeout |
-| `nginx.conf` | Nginx: HTTP→HTTPS redirect, reverse proxy to Gunicorn socket, HTTP/2 + HTTP/3 (QUIC) |
+| `nginx.conf` | Nginx: HTTP→HTTPS redirect, reverse proxy to Gunicorn socket, HTTP/2 + HTTP/3 (QUIC), gzip compression |
 
 ## Architecture
 
