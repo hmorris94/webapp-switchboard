@@ -53,6 +53,7 @@ apt-get update -qq
 apt-get install -y \
     python3 python3-pip python3-venv \
     nginx certbot python3-certbot-nginx \
+    nodejs npm \
     git ufw curl wget
 
 # Chromium + ChromeDriver (required by projects that use Selenium scraping)
@@ -129,6 +130,17 @@ for entry in "${PROJECTS[@]}"; do
 done
 
 chown -R "$SWITCHBOARD_USER:$SWITCHBOARD_USER" "$VENV"
+
+echo "==> Installing npm dependencies and building frontend assets"
+for entry in "${PROJECTS[@]}"; do
+    dir="${entry%%|*}"
+    pkg="$DEPLOY_ROOT/$dir/package.json"
+    if [ -f "$pkg" ]; then
+        echo "  npm install + build: $dir"
+        npm --prefix "$DEPLOY_ROOT/$dir" install --silent
+        npm --prefix "$DEPLOY_ROOT/$dir" run build --silent
+    fi
+done
 
 # =============================================================================
 # 6. systemd service

@@ -53,6 +53,16 @@ for dir in "${PROJECTS[@]}"; do
     fi
 done
 
+echo "--- Rebuilding frontend assets"
+for dir in "${PROJECTS[@]}"; do
+    pkg="$DEPLOY_ROOT/$dir/package.json"
+    if [ -f "$pkg" ]; then
+        echo "  npm install + build: $dir"
+        npm --prefix "$DEPLOY_ROOT/$dir" install --silent
+        npm --prefix "$DEPLOY_ROOT/$dir" run build --silent
+    fi
+done
+
 echo "--- Restarting switchboard service"
 sudo systemctl restart switchboard
 sleep 2
